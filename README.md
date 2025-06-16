@@ -13,7 +13,7 @@ This educational tool reveals a critical concept in machine learning: different 
 
 ## Live Demo
 
-Try the visualization: [your-github-username.github.io/decision-boundaries-viz](https://your-github-username.github.io/decision-boundaries-viz)
+Try the visualization: [dishant2009.github.io/decision-boundaries-viz](https://dishant2009.github.io/decision-boundaries-viz)
 
 ## Key Learning Objectives
 
@@ -115,7 +115,7 @@ npx http-server
 ### Option 3: GitHub Pages
 1. Fork this repository
 2. Enable GitHub Pages in settings
-3. Access at `https://[username].github.io/decision-boundaries-viz`
+3. Access at `https://dishant2009.github.io/decision-boundaries-viz`
 
 ## Understanding the Visualizations
 
@@ -340,14 +340,14 @@ If you use this in academic work, please cite:
   author = {Dishant Digdarshi},
   title = {Decision Boundaries: Interactive Classifier Visualization},
   year = {2024},
-  url = {https://github.com/yourusername/decision-boundaries-viz}
+  url = {https://github.com/dishant2009/decision-boundaries-viz}
 }
 ```
 
 ## Contact
 
-- GitHub: [@yourusername]([https://github.com/yourusername](https://github.com/dishant2009))
-- LinkedIn: [Your Name]([https://linkedin.com/in/yourprofile](https://www.linkedin.com/in/dishant-digdarshi-24430a254))
+- GitHub: [@dishant2009]([[https://github.com/yourusername](https://github.com/dishant2009)](https://github.com/dishant2009))
+- LinkedIn: [Dishant Digdarshi]([[https://linkedin.com/in/yourprofile](https://www.linkedin.com/in/dishant-digdarshi-24430a254)](https://www.linkedin.com/in/dishant-digdarshi-24430a254))
 - Email: digdarshidishant@gmail.com
 
 ---
