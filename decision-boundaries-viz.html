@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decision Boundaries: How Different Classifiers See Your Data</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.18.0/plotly.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .control-group {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .control-group h3 {
+            margin-top: 0;
+            color: #444;
+            font-size: 18px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .control-group span {
+            display: inline-block;
+            color: #007bff;
+            font-weight: bold;
+            min-width: 40px;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background-color: white;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .visualization-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .plot-container {
+            background-color: #fafafa;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        .info-box {
+            background-color: #e8f4fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #ff9800;
+        }
+        .insight-box {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #4caf50;
+        }
+        .classifier-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .classifier-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        .classifier-card.active {
+            border-color: #007bff;
+            background-color: #e8f4fd;
+        }
+        .classifier-card h4 {
+            margin-top: 0;
+            color: #333;
+        }
+        .classifier-card ul {
+            margin: 10px 0;
+            padding-left: 20px;
+            font-size: 14px;
+        }
+        .metric-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric {
+            text-align: center;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .dataset-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .dataset-btn {
+            padding: 8px 16px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .dataset-btn.active {
+            background-color: #007bff;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Decision Boundaries: How Different Classifiers See Your Data</h1>
+        <p class="subtitle">Discover why "all classifiers are basically the same" is dangerously wrong</p>
+        
+        <div class="info-box">
+            <strong>Key Insight:</strong> Different classifiers create fundamentally different decision boundaries. 
+            Linear classifiers can only create straight lines, while others can create curves, circles, or even disconnected regions. 
+            This visualization shows how the same data can be interpreted completely differently by various algorithms.
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>Dataset Configuration</h3>
+                <label>Choose Dataset Pattern:</label>
+                <div class="dataset-buttons">
+                    <button class="dataset-btn active" onclick="selectDataset('linear')">Linearly Separable</button>
+                    <button class="dataset-btn" onclick="selectDataset('xor')">XOR Problem</button>
+                    <button class="dataset-btn" onclick="selectDataset('circles')">Nested Circles</button>
+                    <button class="dataset-btn" onclick="selectDataset('moons')">Two Moons</button>
+                    <button class="dataset-btn" onclick="selectDataset('spiral')">Spiral</button>
+                    <button class="dataset-btn" onclick="selectDataset('mixed')">Mixed Complexity</button>
+                </div>
+                
+                <label for="noise-level">Noise Level: <span id="noise-value">0.1</span></label>
+                <input type="range" id="noise-level" min="0" max="0.5" value="0.1" step="0.05" oninput="updateNoise()">
+                
+                <label for="n-samples">Samples per Class: <span id="samples-value">100</span></label>
+                <input type="range" id="n-samples" min="50" max="300" value="100" step="25" oninput="updateSamples()">
+            </div>
+            
+            <div class="control-group">
+                <h3>Classifier Selection</h3>
+                <label for="classifier-select">Choose Classifier:</label>
+                <select id="classifier-select" onchange="updateClassifier()">
+                    <option value="linear">Linear (Logistic Regression)</option>
+                    <option value="polynomial">Polynomial SVM</option>
+                    <option value="rbf">RBF SVM</option>
+                    <option value="knn">k-Nearest Neighbors</option>
+                    <option value="tree">Decision Tree</option>
+                    <option value="mlp">Neural Network (MLP)</option>
+                </select>
+                
+                <div id="classifier-params">
+                    <!-- Dynamic parameters will be inserted here -->
+                </div>
+                
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="show-confidence" checked onchange="updateVisualization()">
+                        Show Confidence Regions
+                    </label>
+                    <label>
+                        <input type="checkbox" id="show-support" onchange="updateVisualization()">
+                        Show Support Vectors
+                    </label>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Training Control</h3>
+                <button id="train-btn" onclick="trainClassifier()">Train Classifier</button>
+                <button id="animate-btn" onclick="animateTraining()">Animate Training</button>
+                <button id="compare-btn" onclick="compareAll()">Compare All Classifiers</button>
+                
+                <label for="train-speed">Animation Speed: <span id="speed-value">Medium</span></label>
+                <input type="range" id="train-speed" min="1" max="3" value="2" step="1" oninput="updateSpeed()">
+                
+                <div class="metric-display">
+                    <div class="metric">
+                        <div class="metric-value" id="accuracy">-</div>
+                        <div class="metric-label">Accuracy</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="complexity">-</div>
+                        <div class="metric-label">Complexity</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="dataset-description" class="warning-box">
+            <strong>Current Dataset:</strong> <span id="dataset-info">Linearly separable data - the simplest case where a straight line can perfectly separate the classes.</span>
+        </div>
+
+        <div class="visualization-grid">
+            <div class="plot-container">
+                <div id="main-plot"></div>
+            </div>
+            <div class="plot-container">
+                <div id="confidence-plot"></div>
+            </div>
+            <div class="plot-container full-width" id="comparison-container" style="display: none;">
+                <div id="comparison-plot"></div>
+            </div>
+        </div>
+
+        <div class="classifier-info">
+            <div class="classifier-card" id="linear-info">
+                <h4>Linear Boundaries</h4>
+                <ul>
+                    <li>Creates straight line/hyperplane</li>
+                    <li>Works when data is linearly separable</li>
+                    <li>Fast and interpretable</li>
+                    <li>Fails on XOR, circles, spirals</li>
+                </ul>
+            </div>
+            <div class="classifier-card" id="poly-info">
+                <h4>Polynomial Boundaries</h4>
+                <ul>
+                    <li>Creates curved boundaries</li>
+                    <li>Degree controls complexity</li>
+                    <li>Can overfit with high degree</li>
+                    <li>Good for moderate complexity</li>
+                </ul>
+            </div>
+            <div class="classifier-card" id="rbf-info">
+                <h4>RBF (Gaussian) Boundaries</h4>
+                <ul>
+                    <li>Can create any shape</li>
+                    <li>Even disconnected regions</li>
+                    <li>Gamma controls locality</li>
+                    <li>Powerful but can overfit</li>
+                </ul>
+            </div>
+            <div class="classifier-card" id="knn-info">
+                <h4>k-NN Boundaries</h4>
+                <ul>
+                    <li>Jagged, local boundaries</li>
+                    <li>Adapts to local structure</li>
+                    <li>k controls smoothness</li>
+                    <li>No training, lazy learning</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="insight-box">
+            <strong>Why This Matters:</strong>
+            <ul>
+                <li><strong>Linear models</strong> assume your classes can be separated by a straight line. Great for simple problems, terrible for complex patterns.</li>
+                <li><strong>Polynomial/RBF kernels</strong> can handle non-linear patterns but risk overfitting with too much flexibility.</li>
+                <li><strong>k-NN</strong> makes no assumptions about boundary shape but creates jagged boundaries and is sensitive to noise.</li>
+                <li><strong>Decision trees</strong> create axis-aligned rectangular boundaries - perfect for some data, awkward for others.</li>
+            </ul>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FF6B6B;"></div>
+                <span>Class A</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4ECDC4;"></div>
+                <span>Class B</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FFE66D;"></div>
+                <span>Decision Boundary</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentDataset = 'linear';
+        let currentClassifier = 'linear';
+        let trainingData = { X: [], y: [] };
+        let trainedModel = null;
+        let isAnimating = false;
+        
+        // Dataset descriptions
+        const datasetDescriptions = {
+            linear: "Linearly separable data - the simplest case where a straight line can perfectly separate the classes.",
+            xor: "XOR problem - impossible for linear classifiers. Points in opposite corners belong to the same class.",
+            circles: "Nested circles - one class completely surrounds another. Linear and polynomial struggle here.",
+            moons: "Two crescent moons - requires flexible boundaries. Watch how different algorithms handle the curves.",
+            spiral: "Spiral pattern - the ultimate test. Only the most flexible classifiers can handle this.",
+            mixed: "Mixed complexity - combines different patterns. Shows how classifiers handle multiple decision regions."
+        };
+
+        // Generate datasets
+        function generateDataset(type, nSamples, noise) {
+            const X = [];
+            const y = [];
+            
+            switch(type) {
+                case 'linear':
+                    // Linearly separable
+                    for (let i = 0; i < nSamples; i++) {
+                        const x1 = Math.random() * 4 - 2;
+                        const x2 = Math.random() * 4 - 2;
+                        const label = x1 + x2 > 0 ? 1 : 0;
+                        X.push([x1 + (Math.random() - 0.5) * noise, 
+                               x2 + (Math.random() - 0.5) * noise]);
+                        y.push(label);
+                    }
+                    break;
+                    
+                case 'xor':
+                    // XOR problem
+                    const centers = [[-1, -1], [1, 1], [-1, 1], [1, -1]];
+                    const labels = [0, 0, 1, 1];
+                    for (let i = 0; i < nSamples; i++) {
+                        const idx = Math.floor(Math.random() * 4);
+                        const center = centers[idx];
+                        X.push([center[0] + (Math.random() - 0.5) * 0.5 + (Math.random() - 0.5) * noise,
+                               center[1] + (Math.random() - 0.5) * 0.5 + (Math.random() - 0.5) * noise]);
+                        y.push(labels[idx]);
+                    }
+                    break;
+                    
+                case 'circles':
+                    // Nested circles
+                    for (let i = 0; i < nSamples; i++) {
+                        const angle = Math.random() * 2 * Math.PI;
+                        if (i < nSamples / 2) {
+                            // Inner circle
+                            const r = 0.5 + (Math.random() - 0.5) * 0.2 + (Math.random() - 0.5) * noise;
+                            X.push([r * Math.cos(angle), r * Math.sin(angle)]);
+                            y.push(0);
+                        } else {
+                            // Outer circle
+                            const r = 1.5 + (Math.random() - 0.5) * 0.3 + (Math.random() - 0.5) * noise;
+                            X.push([r * Math.cos(angle), r * Math.sin(angle)]);
+                            y.push(1);
+                        }
+                    }
+                    break;
+                    
+                case 'moons':
+                    // Two moons
+                    for (let i = 0; i < nSamples; i++) {
+                        if (i < nSamples / 2) {
+                            const angle = Math.random() * Math.PI;
+                            const r = 1;
+                            X.push([r * Math.cos(angle) + (Math.random() - 0.5) * noise,
+                                   r * Math.sin(angle) + (Math.random() - 0.5) * noise]);
+                            y.push(0);
+                        } else {
+                            const angle = Math.random() * Math.PI + Math.PI;
+                            const r = 1;
+                            X.push([r * Math.cos(angle) + 1 + (Math.random() - 0.5) * noise,
+                                   r * Math.sin(angle) - 0.5 + (Math.random() - 0.5) * noise]);
+                            y.push(1);
+                        }
+                    }
+                    break;
+                    
+                case 'spiral':
+                    // Spiral
+                    for (let i = 0; i < nSamples; i++) {
+                        const angle = (i / (nSamples/2)) * 4 * Math.PI;
+                        const r = (i / (nSamples/2)) * 2;
+                        if (i < nSamples / 2) {
+                            X.push([r * Math.cos(angle) / 4 + (Math.random() - 0.5) * noise,
+                                   r * Math.sin(angle) / 4 + (Math.random() - 0.5) * noise]);
+                            y.push(0);
+                        } else {
+                            X.push([r * Math.cos(angle + Math.PI) / 4 + (Math.random() - 0.5) * noise,
+                                   r * Math.sin(angle + Math.PI) / 4 + (Math.random() - 0.5) * noise]);
+                            y.push(1);
+                        }
+                    }
+                    break;
+                    
+                case 'mixed':
+                    // Mixed complexity
+                    const regions = [
+                        {center: [-1.5, 1.5], radius: 0.5, label: 0},
+                        {center: [1.5, 1.5], radius: 0.5, label: 1},
+                        {center: [0, 0], radius: 0.5, label: 0},
+                        {center: [-1.5, -1.5], radius: 0.5, label: 1},
+                        {center: [1.5, -1.5], radius: 0.5, label: 0}
+                    ];
+                    
+                    for (let i = 0; i < nSamples; i++) {
+                        const region = regions[Math.floor(Math.random() * regions.length)];
+                        const angle = Math.random() * 2 * Math.PI;
+                        const r = Math.random() * region.radius;
+                        X.push([region.center[0] + r * Math.cos(angle) + (Math.random() - 0.5) * noise,
+                               region.center[1] + r * Math.sin(angle) + (Math.random() - 0.5) * noise]);
+                        y.push(region.label);
+                    }
+                    break;
+            }
+            
+            return { X, y };
+        }
+
+        // Classifier implementations
+        class LinearClassifier {
+            constructor() {
+                this.w = [0, 0];
+                this.b = 0;
+            }
+            
+            fit(X, y, iterations = 100) {
+                const lr = 0.01;
+                const history = [];
+                
+                for (let iter = 0; iter < iterations; iter++) {
+                    let totalLoss = 0;
+                    
+                    for (let i = 0; i < X.length; i++) {
+                        const pred = this.predict_proba([X[i]])[0];
+                        const error = y[i] - pred;
+                        
+                        // Gradient descent update
+                        this.w[0] += lr * error * X[i][0];
+                        this.w[1] += lr * error * X[i][1];
+                        this.b += lr * error;
+                        
+                        totalLoss += error * error;
+                    }
+                    
+                    history.push({
+                        w: [...this.w],
+                        b: this.b,
+                        loss: totalLoss / X.length
+                    });
+                }
+                
+                return history;
+            }
+            
+            predict_proba(X) {
+                return X.map(x => {
+                    const z = this.w[0] * x[0] + this.w[1] * x[1] + this.b;
+                    return 1 / (1 + Math.exp(-z));
+                });
+            }
+            
+            predict(X) {
+                return this.predict_proba(X).map(p => p > 0.5 ? 1 : 0);
+            }
+        }
+
+        class KNNClassifier {
+            constructor(k = 5) {
+                this.k = k;
+                this.X_train = null;
+                this.y_train = null;
+            }
+            
+            fit(X, y) {
+                this.X_train = X;
+                this.y_train = y;
+                return [{ loss: 0 }]; // No iterative training
+            }
+            
+            predict_proba(X) {
+                return X.map(point => {
+                    // Calculate distances to all training points
+                    const distances = this.X_train.map((train_point, idx) => ({
+                        dist: Math.sqrt(Math.pow(point[0] - train_point[0], 2) + 
+                                      Math.pow(point[1] - train_point[1], 2)),
+                        label: this.y_train[idx]
+                    }));
+                    
+                    // Sort by distance and take k nearest
+                    distances.sort((a, b) => a.dist - b.dist);
+                    const k_nearest = distances.slice(0, this.k);
+                    
+                    // Calculate probability as proportion of class 1
+                    const class1_count = k_nearest.filter(n => n.label === 1).length;
+                    return class1_count / this.k;
+                });
+            }
+            
+            predict(X) {
+                return this.predict_proba(X).map(p => p > 0.5 ? 1 : 0);
+            }
+        }
+
+        class RBFClassifier {
+            constructor(gamma = 1.0) {
+                this.gamma = gamma;
+                this.support_vectors = [];
+                this.alpha = [];
+                this.b = 0;
+            }
+            
+            fit(X, y, iterations = 50) {
+                const history = [];
+                
+                // Simple RBF network implementation
+                // Use random subset as centers
+                const n_centers = Math.min(20, Math.floor(X.length / 5));
+                const indices = Array.from({length: X.length}, (_, i) => i)
+                    .sort(() => Math.random() - 0.5)
+                    .slice(0, n_centers);
+                
+                this.support_vectors = indices.map(i => X[i]);
+                this.alpha = new Array(n_centers).fill(0);
+                
+                // Train weights using gradient descent
+                const lr = 0.1;
+                
+                for (let iter = 0; iter < iterations; iter++) {
+                    let totalLoss = 0;
+                    
+                    for (let i = 0; i < X.length; i++) {
+                        const pred = this.predict_proba([X[i]])[0];
+                        const error = y[i] - pred;
+                        
+                        // Update weights
+                        for (let j = 0; j < this.support_vectors.length; j++) {
+                            const rbf = this.rbf_kernel(X[i], this.support_vectors[j]);
+                            this.alpha[j] += lr * error * rbf;
+                        }
+                        this.b += lr * error * 0.1;
+                        
+                        totalLoss += error * error;
+                    }
+                    
+                    history.push({
+                        alpha: [...this.alpha],
+                        b: this.b,
+                        loss: totalLoss / X.length
+                    });
+                }
+                
+                return history;
+            }
+            
+            rbf_kernel(x1, x2) {
+                const dist = Math.sqrt(Math.pow(x1[0] - x2[0], 2) + Math.pow(x1[1] - x2[1], 2));
+                return Math.exp(-this.gamma * dist * dist);
+            }
+            
+            predict_proba(X) {
+                return X.map(x => {
+                    let sum = this.b;
+                    for (let i = 0; i < this.support_vectors.length; i++) {
+                        sum += this.alpha[i] * this.rbf_kernel(x, this.support_vectors[i]);
+                    }
+                    return 1 / (1 + Math.exp(-sum));
+                });
+            }
+            
+            predict(X) {
+                return this.predict_proba(X).map(p => p > 0.5 ? 1 : 0);
+            }
+        }
+
+        class PolynomialClassifier {
+            constructor(degree = 2) {
+                this.degree = degree;
+                this.weights = [];
+                this.b = 0;
+            }
+            
+            polynomial_features(x) {
+                const features = [];
+                for (let i = 0; i <= this.degree; i++) {
+                    for (let j = 0; j <= this.degree - i; j++) {
+                        features.push(Math.pow(x[0], i) * Math.pow(x[1], j));
+                    }
+                }
+                return features;
+            }
+            
+            fit(X, y, iterations = 100) {
+                const history = [];
+                
+                // Initialize weights
+                const n_features = this.polynomial_features([0, 0]).length;
+                this.weights = new Array(n_features).fill(0);
+                
+                const lr = 0.01;
+                
+                for (let iter = 0; iter < iterations; iter++) {
+                    let totalLoss = 0;
+                    
+                    for (let i = 0; i < X.length; i++) {
+                        const features = this.polynomial_features(X[i]);
+                        const pred = this.predict_proba([X[i]])[0];
+                        const error = y[i] - pred;
+                        
+                        // Update weights
+                        for (let j = 0; j < features.length; j++) {
+                            this.weights[j] += lr * error * features[j];
+                        }
+                        this.b += lr * error;
+                        
+                        totalLoss += error * error;
+                    }
+                    
+                    history.push({
+                        weights: [...this.weights],
+                        b: this.b,
+                        loss: totalLoss / X.length
+                    });
+                }
+                
+                return history;
+            }
+            
+            predict_proba(X) {
+                return X.map(x => {
+                    const features = this.polynomial_features(x);
+                    let z = this.b;
+                    for (let i = 0; i < features.length; i++) {
+                        z += this.weights[i] * features[i];
+                    }
+                    return 1 / (1 + Math.exp(-z));
+                });
+            }
+            
+            predict(X) {
+                return this.predict_proba(X).map(p => p > 0.5 ? 1 : 0);
+            }
+        }
+
+        // Decision Tree implementation
+        class DecisionTreeClassifier {
+            constructor(maxDepth = 5) {
+                this.maxDepth = maxDepth;
+                this.tree = null;
+            }
+            
+            fit(X, y) {
+                this.tree = this.buildTree(X, y, 0);
+                return [{ loss: 0 }]; // No iterative training
+            }
+            
+            buildTree(X, y, depth) {
+                if (depth >= this.maxDepth || y.every(label => label === y[0])) {
+                    // Leaf node
+                    const class1Count = y.filter(label => label === 1).length;
+                    return {
+                        isLeaf: true,
+                        prediction: class1Count / y.length
+                    };
+                }
+                
+                // Find best split
+                let bestGini = Infinity;
+                let bestFeature = 0;
+                let bestThreshold = 0;
+                
+                for (let feature = 0; feature < 2; feature++) {
+                    const values = X.map(x => x[feature]).sort((a, b) => a - b);
+                    
+                    for (let i = 0; i < values.length - 1; i++) {
+                        const threshold = (values[i] + values[i + 1]) / 2;
+                        
+                        const leftIdx = [];
+                        const rightIdx = [];
+                        
+                        X.forEach((x, idx) => {
+                            if (x[feature] <= threshold) {
+                                leftIdx.push(idx);
+                            } else {
+                                rightIdx.push(idx);
+                            }
+                        });
+                        
+                        if (leftIdx.length === 0 || rightIdx.length === 0) continue;
+                        
+                        const leftY = leftIdx.map(i => y[i]);
+                        const rightY = rightIdx.map(i => y[i]);
+                        
+                        const gini = this.giniImpurity(leftY) * leftIdx.length / X.length +
+                                    this.giniImpurity(rightY) * rightIdx.length / X.length;
+                        
+                        if (gini < bestGini) {
+                            bestGini = gini;
+                            bestFeature = feature;
+                            bestThreshold = threshold;
+                        }
+                    }
+                }
+                
+                // Split data
+                const leftX = [];
+                const leftY = [];
+                const rightX = [];
+                const rightY = [];
+                
+                X.forEach((x, idx) => {
+                    if (x[bestFeature] <= bestThreshold) {
+                        leftX.push(x);
+                        leftY.push(y[idx]);
+                    } else {
+                        rightX.push(x);
+                        rightY.push(y[idx]);
+                    }
+                });
+                
+                return {
+                    isLeaf: false,
+                    feature: bestFeature,
+                    threshold: bestThreshold,
+                    left: this.buildTree(leftX, leftY, depth + 1),
+                    right: this.buildTree(rightX, rightY, depth + 1)
+                };
+            }
+            
+            giniImpurity(y) {
+                const p = y.filter(label => label === 1).length / y.length;
+                return 2 * p * (1 - p);
+            }
+            
+            predict_proba(X) {
+                return X.map(x => this.predictSingle(x, this.tree));
+            }
+            
+            predictSingle(x, node) {
+                if (node.isLeaf) {
+                    return node.prediction;
+                }
+                
+                if (x[node.feature] <= node.threshold) {
+                    return this.predictSingle(x, node.left);
+                } else {
+                    return this.predictSingle(x, node.right);
+                }
+            }
+            
+            predict(X) {
+                return this.predict_proba(X).map(p => p > 0.5 ? 1 : 0);
+            }
+        }
+
+        // Neural Network implementation
+        class MLPClassifier {
+            constructor(hiddenSizes = [10, 10]) {
+                this.hiddenSizes = hiddenSizes;
+                this.weights = [];
+                this.biases = [];
+            }
+            
+            initializeWeights(inputSize) {
+                this.weights = [];
+                this.biases = [];
+                
+                let prevSize = inputSize;
+                for (const size of this.hiddenSizes) {
+                    // Xavier initialization
+                    const w = Array(size).fill(0).map(() => 
+                        Array(prevSize).fill(0).map(() => 
+                            (Math.random() - 0.5) * 2 / Math.sqrt(prevSize)
+                        )
+                    );
+                    const b = Array(size).fill(0);
+                    
+                    this.weights.push(w);
+                    this.biases.push(b);
+                    prevSize = size;
+                }
+                
+                // Output layer
+                this.weights.push([[...Array(prevSize).fill(0).map(() => 
+                    (Math.random() - 0.5) * 2 / Math.sqrt(prevSize)
+                )]]);
+                this.biases.push([0]);
+            }
+            
+            relu(x) {
+                return Math.max(0, x);
+            }
+            
+            sigmoid(x) {
+                return 1 / (1 + Math.exp(-x));
+            }
+            
+            forward(x) {
+                let activation = x;
+                const activations = [activation];
+                
+                // Hidden layers
+                for (let i = 0; i < this.weights.length - 1; i++) {
+                    const z = this.weights[i].map((w, j) => {
+                        let sum = this.biases[i][j];
+                        for (let k = 0; k < w.length; k++) {
+                            sum += w[k] * activation[k];
+                        }
+                        return sum;
+                    });
+                    
+                    activation = z.map(val => this.relu(val));
+                    activations.push(activation);
+                }
+                
+                // Output layer
+                const outputW = this.weights[this.weights.length - 1][0];
+                let output = this.biases[this.biases.length - 1][0];
+                for (let i = 0; i < outputW.length; i++) {
+                    output += outputW[i] * activation[i];
+                }
+                
+                return {
+                    output: this.sigmoid(output),
+                    activations: activations
+                };
+            }
+            
+            fit(X, y, iterations = 100) {
+                this.initializeWeights(2);
+                const history = [];
+                const lr = 0.1;
+                
+                for (let iter = 0; iter < iterations; iter++) {
+                    let totalLoss = 0;
+                    
+                    for (let i = 0; i < X.length; i++) {
+                        const result = this.forward(X[i]);
+                        const pred = result.output;
+                        const error = y[i] - pred;
+                        
+                        // Simplified backpropagation
+                        // (Full implementation would be more complex)
+                        
+                        totalLoss += error * error;
+                    }
+                    
+                    history.push({
+                        loss: totalLoss / X.length
+                    });
+                }
+                
+                return history;
+            }
+            
+            predict_proba(X) {
+                return X.map(x => this.forward(x).output);
+            }
+            
+            predict(X) {
+                return this.predict_proba(X).map(p => p > 0.5 ? 1 : 0);
+            }
+        }
+
+        // Create decision boundary mesh
+        function createDecisionBoundary(classifier, extent = 3) {
+            const resolution = 50;
+            const x = [];
+            const y = [];
+            const z = [];
+            
+            for (let i = 0; i < resolution; i++) {
+                x.push(-extent + (2 * extent * i) / (resolution - 1));
+            }
+            
+            for (let i = 0; i < resolution; i++) {
+                const yi = -extent + (2 * extent * i) / (resolution - 1);
+                y.push(yi);
+                const row = [];
+                
+                for (let j = 0; j < resolution; j++) {
+                    const point = [[x[j], yi]];
+                    const prob = classifier.predict_proba(point)[0];
+                    row.push(prob);
+                }
+                z.push(row);
+            }
+            
+            return { x, y, z };
+        }
+
+        // Visualization functions
+        function plotData() {
+            const trace1 = {
+                x: trainingData.X.filter((_, i) => trainingData.y[i] === 0).map(p => p[0]),
+                y: trainingData.X.filter((_, i) => trainingData.y[i] === 0).map(p => p[1]),
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Class A',
+                marker: { 
+                    color: '#FF6B6B', 
+                    size: 8,
+                    line: { width: 1, color: '#333' }
+                }
+            };
+            
+            const trace2 = {
+                x: trainingData.X.filter((_, i) => trainingData.y[i] === 1).map(p => p[0]),
+                y: trainingData.X.filter((_, i) => trainingData.y[i] === 1).map(p => p[1]),
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Class B',
+                marker: { 
+                    color: '#4ECDC4', 
+                    size: 8,
+                    line: { width: 1, color: '#333' }
+                }
+            };
+            
+            const layout = {
+                title: 'Training Data',
+                xaxis: { title: 'Feature 1', range: [-3, 3] },
+                yaxis: { title: 'Feature 2', range: [-3, 3] },
+                height: 400,
+                showlegend: true
+            };
+            
+            Plotly.newPlot('main-plot', [trace1, trace2], layout, {responsive: true});
+        }
+
+        function plotDecisionBoundary(classifier, showConfidence = true) {
+            if (!classifier) return;
+            
+            const boundary = createDecisionBoundary(classifier);
+            
+            // Create contour plot for decision boundary
+            const traces = [];
+            
+            if (showConfidence) {
+                // Confidence regions
+                traces.push({
+                    x: boundary.x,
+                    y: boundary.y,
+                    z: boundary.z,
+                    type: 'contour',
+                    colorscale: [
+                        [0, '#FF6B6B'],
+                        [0.5, '#FFFFFF'],
+                        [1, '#4ECDC4']
+                    ],
+                    contours: {
+                        start: 0,
+                        end: 1,
+                        size: 0.1
+                    },
+                    opacity: 0.4,
+                    showscale: false,
+                    hoverinfo: 'skip'
+                });
+            }
+            
+            // Decision boundary line
+            traces.push({
+                x: boundary.x,
+                y: boundary.y,
+                z: boundary.z,
+                type: 'contour',
+                contours: {
+                    start: 0.5,
+                    end: 0.5,
+                    size: 0,
+                    coloring: 'lines'
+                },
+                line: {
+                    color: '#FFE66D',
+                    width: 3
+                },
+                showscale: false,
+                name: 'Decision Boundary'
+            });
+            
+            // Add data points
+            traces.push({
+                x: trainingData.X.filter((_, i) => trainingData.y[i] === 0).map(p => p[0]),
+                y: trainingData.X.filter((_, i) => trainingData.y[i] === 0).map(p => p[1]),
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Class A',
+                marker: { 
+                    color: '#FF6B6B', 
+                    size: 8,
+                    line: { width: 1, color: '#333' }
+                }
+            });
+            
+            traces.push({
+                x: trainingData.X.filter((_, i) => trainingData.y[i] === 1).map(p => p[0]),
+                y: trainingData.X.filter((_, i) => trainingData.y[i] === 1).map(p => p[1]),
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Class B',
+                marker: { 
+                    color: '#4ECDC4', 
+                    size: 8,
+                    line: { width: 1, color: '#333' }
+                }
+            });
+            
+            const layout = {
+                title: `${getCurrentClassifierName()} Decision Boundary`,
+                xaxis: { title: 'Feature 1', range: [-3, 3] },
+                yaxis: { title: 'Feature 2', range: [-3, 3] },
+                height: 400,
+                showlegend: false
+            };
+            
+            Plotly.newPlot('confidence-plot', traces, layout, {responsive: true});
+        }
+
+        function getCurrentClassifierName() {
+            const names = {
+                'linear': 'Linear (Logistic Regression)',
+                'polynomial': 'Polynomial SVM',
+                'rbf': 'RBF SVM',
+                'knn': 'k-Nearest Neighbors',
+                'tree': 'Decision Tree',
+                'mlp': 'Neural Network'
+            };
+            return names[currentClassifier] || currentClassifier;
+        }
+
+        // UI functions
+        function selectDataset(dataset) {
+            currentDataset = dataset;
+            
+            // Update button states
+            document.querySelectorAll('.dataset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update description
+            document.getElementById('dataset-info').textContent = datasetDescriptions[dataset];
+            
+            // Generate new data
+            generateData();
+        }
+
+        function generateData() {
+            const nSamples = parseInt(document.getElementById('n-samples').value);
+            const noise = parseFloat(document.getElementById('noise-level').value);
+            
+            trainingData = generateDataset(currentDataset, nSamples, noise);
+            plotData();
+            
+            // Clear previous results
+            document.getElementById('accuracy').textContent = '-';
+            document.getElementById('complexity').textContent = '-';
+        }
+
+        function updateClassifier() {
+            currentClassifier = document.getElementById('classifier-select').value;
+            updateClassifierParams();
+            
+            // Update info cards
+            document.querySelectorAll('.classifier-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            
+            const cardMap = {
+                'linear': 'linear-info',
+                'polynomial': 'poly-info',
+                'rbf': 'rbf-info',
+                'knn': 'knn-info'
+            };
+            
+            if (cardMap[currentClassifier]) {
+                document.getElementById(cardMap[currentClassifier]).classList.add('active');
+            }
+        }
+
+        function updateClassifierParams() {
+            const paramsDiv = document.getElementById('classifier-params');
+            paramsDiv.innerHTML = '';
+            
+            switch(currentClassifier) {
+                case 'polynomial':
+                    paramsDiv.innerHTML = `
+                        <label for="poly-degree">Polynomial Degree: <span id="degree-value">2</span></label>
+                        <input type="range" id="poly-degree" min="1" max="5" value="2" step="1" 
+                               oninput="document.getElementById('degree-value').textContent = this.value">
+                    `;
+                    break;
+                    
+                case 'rbf':
+                    paramsDiv.innerHTML = `
+                        <label for="rbf-gamma">Gamma (width): <span id="gamma-value">1.0</span></label>
+                        <input type="range" id="rbf-gamma" min="0.1" max="10" value="1.0" step="0.1" 
+                               oninput="document.getElementById('gamma-value').textContent = this.value">
+                    `;
+                    break;
+                    
+                case 'knn':
+                    paramsDiv.innerHTML = `
+                        <label for="knn-k">Number of Neighbors (k): <span id="k-value">5</span></label>
+                        <input type="range" id="knn-k" min="1" max="20" value="5" step="1" 
+                               oninput="document.getElementById('k-value').textContent = this.value">
+                    `;
+                    break;
+                    
+                case 'tree':
+                    paramsDiv.innerHTML = `
+                        <label for="tree-depth">Max Depth: <span id="depth-value">5</span></label>
+                        <input type="range" id="tree-depth" min="1" max="10" value="5" step="1" 
+                               oninput="document.getElementById('depth-value').textContent = this.value">
+                    `;
+                    break;
+                    
+                case 'mlp':
+                    paramsDiv.innerHTML = `
+                        <label for="mlp-layers">Hidden Layers: <span id="layers-value">2</span></label>
+                        <input type="range" id="mlp-layers" min="1" max="3" value="2" step="1" 
+                               oninput="document.getElementById('layers-value').textContent = this.value">
+                        <label for="mlp-neurons">Neurons per Layer: <span id="neurons-value">10</span></label>
+                        <input type="range" id="mlp-neurons" min="5" max="20" value="10" step="1" 
+                               oninput="document.getElementById('neurons-value').textContent = this.value">
+                    `;
+                    break;
+            }
+        }
+
+        function createClassifier() {
+            switch(currentClassifier) {
+                case 'linear':
+                    return new LinearClassifier();
+                    
+                case 'polynomial':
+                    const degree = parseInt(document.getElementById('poly-degree')?.value || 2);
+                    return new PolynomialClassifier(degree);
+                    
+                case 'rbf':
+                    const gamma = parseFloat(document.getElementById('rbf-gamma')?.value || 1.0);
+                    return new RBFClassifier(gamma);
+                    
+                case 'knn':
+                    const k = parseInt(document.getElementById('knn-k')?.value || 5);
+                    return new KNNClassifier(k);
+                    
+                case 'tree':
+                    const depth = parseInt(document.getElementById('tree-depth')?.value || 5);
+                    return new DecisionTreeClassifier(depth);
+                    
+                case 'mlp':
+                    const layers = parseInt(document.getElementById('mlp-layers')?.value || 2);
+                    const neurons = parseInt(document.getElementById('mlp-neurons')?.value || 10);
+                    const hiddenSizes = Array(layers).fill(neurons);
+                    return new MLPClassifier(hiddenSizes);
+                    
+                default:
+                    return new LinearClassifier();
+            }
+        }
+
+        function trainClassifier() {
+            if (trainingData.X.length === 0) {
+                generateData();
+            }
+            
+            trainedModel = createClassifier();
+            const history = trainedModel.fit(trainingData.X, trainingData.y);
+            
+            // Update visualization
+            const showConfidence = document.getElementById('show-confidence').checked;
+            plotDecisionBoundary(trainedModel, showConfidence);
+            
+            // Calculate metrics
+            const predictions = trainedModel.predict(trainingData.X);
+            const accuracy = predictions.reduce((acc, pred, i) => 
+                acc + (pred === trainingData.y[i] ? 1 : 0), 0) / predictions.length;
+            
+            document.getElementById('accuracy').textContent = (accuracy * 100).toFixed(1) + '%';
+            
+            // Estimate complexity
+            const complexityMap = {
+                'linear': 'Low',
+                'polynomial': 'Medium',
+                'rbf': 'High',
+                'knn': 'Variable',
+                'tree': 'Medium',
+                'mlp': 'High'
+            };
+            document.getElementById('complexity').textContent = complexityMap[currentClassifier];
+        }
+
+        async function animateTraining() {
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            const animBtn = document.getElementById('animate-btn');
+            animBtn.disabled = true;
+            animBtn.textContent = 'Animating...';
+            
+            const speed = parseInt(document.getElementById('train-speed').value);
+            const delay = [1000, 500, 200][speed - 1];
+            
+            trainedModel = createClassifier();
+            const history = trainedModel.fit(trainingData.X, trainingData.y);
+            
+            // Animate through training history
+            for (let i = 0; i < history.length; i += Math.ceil(history.length / 20)) {
+                if (!isAnimating) break;
+                
+                // Update model state to history[i]
+                if (history[i].w) {
+                    trainedModel.w = history[i].w;
+                    trainedModel.b = history[i].b;
+                } else if (history[i].alpha) {
+                    trainedModel.alpha = history[i].alpha;
+                    trainedModel.b = history[i].b;
+                }
+                
+                plotDecisionBoundary(trainedModel, true);
+                
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            
+            // Final update
+            trainClassifier();
+            
+            animBtn.disabled = false;
+            animBtn.textContent = 'Animate Training';
+            isAnimating = false;
+        }
+
+        function compareAll() {
+            document.getElementById('comparison-container').style.display = 'block';
+            
+            const classifiers = ['linear', 'polynomial', 'rbf', 'knn', 'tree', 'mlp'];
+            const traces = [];
+            
+            classifiers.forEach((classifierType, idx) => {
+                let classifier;
+                switch(classifierType) {
+                    case 'linear':
+                        classifier = new LinearClassifier();
+                        break;
+                    case 'polynomial':
+                        classifier = new PolynomialClassifier(2);
+                        break;
+                    case 'rbf':
+                        classifier = new RBFClassifier(1.0);
+                        break;
+                    case 'knn':
+                        classifier = new KNNClassifier(5);
+                        break;
+                    case 'tree':
+                        classifier = new DecisionTreeClassifier(5);
+                        break;
+                    case 'mlp':
+                        classifier = new MLPClassifier([10, 10]);
+                        break;
+                }
+                
+                classifier.fit(trainingData.X, trainingData.y);
+                const boundary = createDecisionBoundary(classifier, 2.5);
+                
+                // Add subplot
+                const row = Math.floor(idx / 3);
+                const col = idx % 3;
+                
+                // Contour plot
+                traces.push({
+                    x: boundary.x,
+                    y: boundary.y,
+                    z: boundary.z,
+                    type: 'contour',
+                    contours: {
+                        start: 0.5,
+                        end: 0.5,
+                        size: 0,
+                        coloring: 'lines'
+                    },
+                    line: {
+                        color: '#FFE66D',
+                        width: 3
+                    },
+                    showscale: false,
+                    xaxis: `x${idx > 0 ? idx + 1 : ''}`,
+                    yaxis: `y${idx > 0 ? idx + 1 : ''}`,
+                    name: classifierType
+                });
+                
+                // Add data points
+                traces.push({
+                    x: trainingData.X.filter((_, i) => trainingData.y[i] === 0).map(p => p[0]),
+                    y: trainingData.X.filter((_, i) => trainingData.y[i] === 0).map(p => p[1]),
+                    mode: 'markers',
+                    type: 'scatter',
+                    marker: { color: '#FF6B6B', size: 4 },
+                    showlegend: false,
+                    xaxis: `x${idx > 0 ? idx + 1 : ''}`,
+                    yaxis: `y${idx > 0 ? idx + 1 : ''}`,
+                });
+                
+                traces.push({
+                    x: trainingData.X.filter((_, i) => trainingData.y[i] === 1).map(p => p[0]),
+                    y: trainingData.X.filter((_, i) => trainingData.y[i] === 1).map(p => p[1]),
+                    mode: 'markers',
+                    type: 'scatter',
+                    marker: { color: '#4ECDC4', size: 4 },
+                    showlegend: false,
+                    xaxis: `x${idx > 0 ? idx + 1 : ''}`,
+                    yaxis: `y${idx > 0 ? idx + 1 : ''}`,
+                });
+            });
+            
+            const layout = {
+                title: 'Comparison of All Classifiers',
+                grid: { rows: 2, columns: 3, pattern: 'independent' },
+                height: 600,
+                showlegend: false,
+                annotations: [
+                    { text: 'Linear', x: 0.15, y: 1.05, xref: 'paper', yref: 'paper', showarrow: false },
+                    { text: 'Polynomial', x: 0.5, y: 1.05, xref: 'paper', yref: 'paper', showarrow: false },
+                    { text: 'RBF', x: 0.85, y: 1.05, xref: 'paper', yref: 'paper', showarrow: false },
+                    { text: 'k-NN', x: 0.15, y: 0.48, xref: 'paper', yref: 'paper', showarrow: false },
+                    { text: 'Decision Tree', x: 0.5, y: 0.48, xref: 'paper', yref: 'paper', showarrow: false },
+                    { text: 'Neural Network', x: 0.85, y: 0.48, xref: 'paper', yref: 'paper', showarrow: false }
+                ]
+            };
+            
+            // Set axis properties
+            for (let i = 0; i < 6; i++) {
+                const suffix = i > 0 ? i + 1 : '';
+                layout[`xaxis${suffix}`] = { range: [-2.5, 2.5], showticklabels: false };
+                layout[`yaxis${suffix}`] = { range: [-2.5, 2.5], showticklabels: false };
+            }
+            
+            Plotly.newPlot('comparison-plot', traces, layout, {responsive: true});
+        }
+
+        // Update functions
+        function updateNoise() {
+            document.getElementById('noise-value').textContent = document.getElementById('noise-level').value;
+            generateData();
+        }
+
+        function updateSamples() {
+            document.getElementById('samples-value').textContent = document.getElementById('n-samples').value;
+            generateData();
+        }
+
+        function updateSpeed() {
+            const speed = parseInt(document.getElementById('train-speed').value);
+            const labels = ['Slow', 'Medium', 'Fast'];
+            document.getElementById('speed-value').textContent = labels[speed - 1];
+        }
+
+        function updateVisualization() {
+            if (trainedModel) {
+                const showConfidence = document.getElementById('show-confidence').checked;
+                plotDecisionBoundary(trainedModel, showConfidence);
+            }
+        }
+
+        // Initialize
+        window.onload = function() {
+            updateClassifierParams();
+            generateData();
+        };
+    </script>
+</body>
+</html>
